@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --scrollbar-bg: #111827;
+  --scrollbar-thumb: #243050;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #0b0f1a;
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2e3a5c;
+}
+
+/* Prose-like text in assistant responses */
+.prose-dark p {
+  margin-bottom: 0.75rem;
+  line-height: 1.65;
+}
+.prose-dark ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.prose-dark ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+.prose-dark li {
+  margin-bottom: 0.25rem;
+}
+.prose-dark strong {
+  color: #c7d2fe;
+  font-weight: 600;
+}
+.prose-dark code {
+  background: #1e2a42;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.85em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Animated skeleton loader */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #1a2236 25%, #243050 50%, #1a2236 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+/* Smooth typing cursor */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink {
+  animation: blink 1s step-end infinite;
+}

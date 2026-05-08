@@ -1,0 +1,46 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: streamvision-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - APP_ENV=development
+      - LOG_LEVEL=INFO
+      - CORS_ORIGINS=http://localhost:3000
+      - DATABASE_URL=sqlite:///./data/insights.db
+      - CHROMA_PERSIST_DIR=./data/chroma
+      - CSV_DATA_DIR=./data/csv
+      - PDF_DATA_DIR=./data/pdfs
+      - AI_MODEL=gemini-2.5-flash
+    volumes:
+      - backend-data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: streamvision-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend-data:
