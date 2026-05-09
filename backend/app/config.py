@@ -16,9 +16,21 @@ class Settings(BaseSettings):
     csv_data_dir: str = Field(default="./data/csv", alias="CSV_DATA_DIR")
     pdf_data_dir: str = Field(default="./data/pdfs", alias="PDF_DATA_DIR")
 
+    ai_provider: str = Field(default="gemini", alias="AI_PROVIDER")
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    ai_model: str = Field(default="gemini-2.5-flash-lite", alias="AI_MODEL")
+    groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
+    ai_model: str = Field(default="", alias="AI_MODEL")
     ai_max_tokens: int = Field(default=4096, alias="AI_MAX_TOKENS")
+
+    @property
+    def resolved_model(self) -> str:
+        if self.ai_model:
+            return self.ai_model
+        return "gemini-2.5-flash-lite" if self.ai_provider == "gemini" else "llama-3.3-70b-versatile"
+
+    @property
+    def active_api_key(self) -> str:
+        return self.groq_api_key if self.ai_provider == "groq" else self.gemini_api_key
 
     app_api_key: str = Field(default="", alias="APP_API_KEY")
     require_api_key: bool = Field(default=False, alias="REQUIRE_API_KEY")
