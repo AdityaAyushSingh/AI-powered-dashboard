@@ -9,11 +9,11 @@ A secure, enterprise-grade AI analytics assistant for StreamVision Entertainment
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         Browser (Next.js)                       │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │ Filter Panel│  │  Chat UI     │  │  Insights / Charts   │  │
-│  │ (year/genre │  │  + Tool Trace│  │  (Recharts, KPIs)    │  │
-│  │  /region)   │  │  + Citations │  │                      │  │
-│  └─────────────┘  └──────────────┘  └──────────────────────┘  │
+│   ┌─────────────┐  ┌──────────────┐  ┌──────────────────────┐   │
+│   │ Filter Panel│  │  Chat UI     │  │  Insights / Charts   │   │
+│   │ (year/genre │  │  + Tool Trace│  │  (Recharts, KPIs)    │   │
+│   │  /region)   │  │  + Citations │  │                      │   │
+│   └─────────────┘  └──────────────┘  └──────────────────────┘   │
 └────────────────────────────┬────────────────────────────────────┘
                              │ HTTP (Next.js proxy rewrite)
                              ▼
@@ -23,32 +23,32 @@ A secure, enterprise-grade AI analytics assistant for StreamVision Entertainment
 │   POST /api/chat     GET /api/insights     GET /health          │
 │         │                                                       │
 │         ▼                                                       │
-│   ┌─────────────────────────────────────────────────────────┐  │
-│   │              Orchestrator (Agentic Loop)                 │  │
-│   │                                                          │  │
-│   │  1. Build messages + tool definitions                    │  │
-│   │  2. Call Gemini 2.5 Flash via Google GenAI API               │  │
-│   │  3. If function_call → execute tool → append result      │  │
-│   │  4. Loop until text-only response (max 8 steps)          │  │
-│   │  5. Extract answer + sources + citations + chart         │  │
-│   └─────────────────────────────────────────────────────────┘  │
+│   ┌─────────────────────────────────────────────────────────┐   │
+│   │              Orchestrator (Agentic Loop)                │   │
+│   │                                                         │   │
+│   │  1. Build messages + tool definitions                   │   │
+│   │  2. Call Gemini 2.5 Flash via Google GenAI API          │   │
+│   │  3. If function_call → execute tool → append result     │   │
+│   │  4. Loop until text-only response (max 8 steps)         │   │
+│   │  5. Extract answer + sources + citations + chart        │   │
+│   └─────────────────────────────────────────────────────────┘   │
 │         │                                                       │
-│   ┌─────┴──────────────────────────────────────────────────┐   │
-│   │                    Tool Registry                         │   │
-│   │                                                          │   │
+│   ┌─────┴───────────────────────────────────────────────────┐   │
+│   │                    Tool Registry                        │   │
+│   │                                                         │   │
 │   │  query_business_data  │  search_documents               │   │
-│   │  analyze_csv          │  get_chart_data                  │   │
+│   │  analyze_csv          │  get_chart_data                 │   │
 │   └────────┬──────────────┴──────────────┬──────────────────┘   │
-│            │                              │                      │
-│   ┌────────▼──────────┐  ┌───────────────▼──────────────────┐  │
-│   │   SQL Tool         │  │  Document Tool                   │  │
-│   │  (SQLAlchemy)      │  │  (ChromaDB + sentence-transformers│  │
-│   │  Parameterised     │  │   PDF chunks + metadata)         │  │
-│   │  named queries     │  └──────────────────────────────────┘  │
+│            │                             │                      │
+│   ┌────────▼──────────┐  ┌───────────────▼──────────────────┐   │
+│   │   SQL Tool        │  │  Document Tool                   │   │
+│   │  (SQLAlchemy)     │  │  ChromaDB + sentence-transformers│   │
+│   │  Parameterised    │  │   PDF chunks + metadata          │   │
+│   │  named queries    │  └──────────────────────────────────┘   │
 │   └────────┬──────────┘                                         │
 │            │          ┌───────────────────────────────────┐     │
 │   ┌────────▼──────┐   │  CSV Tool                         │     │
-│   │  SQLite DB    │   │  (pandas · group/filter/aggregate) │     │
+│   │  SQLite DB    │   │  (pandas · group/filter/aggregate)│     │
 │   │  6 tables     │   └───────────────────────────────────┘     │
 │   └───────────────┘                                             │
 └─────────────────────────────────────────────────────────────────┘
