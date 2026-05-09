@@ -42,7 +42,18 @@ _GEMINI_TOOLS = _build_gemini_tools()
 
 def _build_contents(question: str, history: list[dict]) -> list[types.Content]:
     contents = []
-    for msg in history[-6:]:  # cap history to last 3 turns
+    # Point 2: Smart Context Management
+    # Keep up to 10 turns, but limit total history characters to 10k to prevent bloat
+    valid_history = []
+    char_count = 0
+    for msg in reversed(history[-10:]):
+        content_len = len(msg.get("content", ""))
+        if char_count + content_len > 10000:
+            break
+        char_count += content_len
+        valid_history.insert(0, msg)
+
+    for msg in valid_history:
         role = msg.get("role")
         if role == "user":
             contents.append(types.Content(role="user", parts=[types.Part(text=msg["content"])]))
@@ -134,24 +145,32 @@ def run_agent(question: str, history: list[dict] | None = None,
         log.info("Agent step", request_id=request_id, step=steps)
 
         try:
-            response = client.models.generate_content(
-                model=settings.ai_model,
-                contents=contents,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    tools=_GEMINI_TOOLS,
-                ),
-            )
+            # Point 1: API Resiliency & Exponential Backoff
+            max_retries = 3
+            retry_delay = 2
+            for attempt in range(max_retries):
+                try:
+                    response = client.models.generate_content(
+                        model=settings.ai_model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                            tools=_GEMINI_TOOLS,
+                        ),
+                    )
+                    break
+                except Exception as api_exc:
+                    if "429" in str(api_exc) and attempt < max_retries - 1:
+                        log.warning(f"Rate limited (429). Retrying in {retry_delay}s...", attempt=attempt+1)
+                        time.sleep(retry_delay)
+                        retry_delay *= 2
+                    else:
+                        raise api_exc
         except Exception as e:
+            # Point 4: Error Handling Leakage
+            # Instead of returning raw error trace to user, raise it so router can handle it securely
             log.error("API error", error=str(e))
-            return ChatResponse(
-                id=request_id,
-                answer=f"The AI service returned an error: {e}",
-                sources=[],
-                tool_trace=tool_trace,
-                citations=[],
-                latency_ms=int((time.monotonic() - start) * 1000),
-            )
+            raise RuntimeError("The AI service is currently unavailable. Please try again later.") from e
 
         candidate = response.candidates[0]
         model_content = candidate.content

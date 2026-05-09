@@ -6,12 +6,14 @@ from app.models.schemas import ChatRequest, ChatResponse
 from app.orchestrator.agent import run_agent
 from app.utils.security import validate_user_input
 from app.utils.logger import get_logger
+from app.utils.limiter import limiter
 
 router = APIRouter(prefix="/api", tags=["chat"])
 log = get_logger("router.chat")
 
 
 @router.post("/chat", response_model=ChatResponse)
+@limiter.limit("10/minute")
 async def chat(request: Request, body: ChatRequest) -> ChatResponse:
     try:
         question = validate_user_input(body.question)
@@ -31,6 +33,10 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
             history=history,
             filters=body.filters,
         )
+    except RuntimeError as re:
+        # Point 4: Mask upstream AI errors and return standard 503
+        log.warning("Agent unavailable", detail=str(re))
+        raise HTTPException(status_code=503, detail=str(re))
     except Exception as e:
         log.error("Agent error", error=str(e))
         raise HTTPException(status_code=500, detail="Internal server error")

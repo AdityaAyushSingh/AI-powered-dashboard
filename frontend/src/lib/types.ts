@@ -78,3 +78,18 @@ export interface Filters {
   region?: string
   city?: string
 }
+
+export interface QueryHistoryEntry {
+  id: string
+  question: string
+  timestamp: string
+  answer: string
+  sources: string[]
+  tool_trace: ToolCall[]
+  latency_ms: number
+  citations: Citation[]
+}
+
+export type RightPanelView = 'insights' | 'history' | 'charts'
+
+export type ThemeMode = 'light' | 'dark' | 'system'

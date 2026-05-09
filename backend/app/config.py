@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     pdf_data_dir: str = Field(default="./data/pdfs", alias="PDF_DATA_DIR")
 
     gemini_api_key: str = Field(default="", alias="GEMINI_API_KEY")
-    ai_model: str = Field(default="gemini-2.5-flash", alias="AI_MODEL")
+    ai_model: str = Field(default="gemini-2.5-flash-lite", alias="AI_MODEL")
     ai_max_tokens: int = Field(default=4096, alias="AI_MAX_TOKENS")
 
     max_query_results: int = Field(default=100, alias="MAX_QUERY_RESULTS")
