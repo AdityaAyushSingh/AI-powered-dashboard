@@ -1,6 +1,18 @@
 import type { AssistantMessage, ChatMessage, Filters, InsightsData } from './types'
 
 const BASE = ''  // uses Next.js rewrite proxy
+const APP_API_KEY = process.env.NEXT_PUBLIC_APP_API_KEY
+
+function jsonHeaders(): HeadersInit {
+  return {
+    'Content-Type': 'application/json',
+    ...(APP_API_KEY ? { 'X-API-Key': APP_API_KEY } : {}),
+  }
+}
+
+function authHeaders(): HeadersInit {
+  return APP_API_KEY ? { 'X-API-Key': APP_API_KEY } : {}
+}
 
 export async function sendMessage(
   question: string,
@@ -9,7 +21,7 @@ export async function sendMessage(
 ): Promise<AssistantMessage> {
   const res = await fetch(`${BASE}/api/chat`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: jsonHeaders(),
     body: JSON.stringify({ question, history, filters }),
   })
 
@@ -22,7 +34,7 @@ export async function sendMessage(
 }
 
 export async function fetchInsights(): Promise<InsightsData> {
-  const res = await fetch(`${BASE}/api/insights`)
+  const res = await fetch(`${BASE}/api/insights`, { headers: authHeaders() })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

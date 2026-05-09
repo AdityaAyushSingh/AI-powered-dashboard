@@ -33,8 +33,8 @@ if [ ! -f ".env" ]; then
     cp .env.example .env
     echo "  Created backend/.env from template."
     echo ""
-    echo "  ⚠️  IMPORTANT: Edit backend/.env and set your ANTHROPIC_API_KEY"
-    echo "  Get one at https://console.anthropic.com"
+    echo "  IMPORTANT: Edit backend/.env and set your GEMINI_API_KEY"
+    echo "  Get one at https://aistudio.google.com/apikey"
     echo ""
 fi
 

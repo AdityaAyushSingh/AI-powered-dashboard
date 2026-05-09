@@ -1,18 +1,25 @@
 from __future__ import annotations
 from pydantic import BaseModel, Field
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from datetime import datetime
 
 
 class ChatMessage(BaseModel):
-    role: str
-    content: str
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=4000)
+
+
+class Filters(BaseModel):
+    year: int | None = Field(default=None, ge=2020, le=2030)
+    genre: str | None = Field(default=None, max_length=50)
+    region: str | None = Field(default=None, max_length=50)
+    city: str | None = Field(default=None, max_length=100)
 
 
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=2, max_length=2000)
     history: list[ChatMessage] = Field(default_factory=list, max_length=20)
-    filters: dict[str, Any] = Field(default_factory=dict)
+    filters: Filters = Field(default_factory=Filters)
 
 
 class ToolCall(BaseModel):

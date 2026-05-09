@@ -1,11 +1,12 @@
 from __future__ import annotations
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from functools import lru_cache
-import os
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=".env", populate_by_name=True)
+
     app_env: str = Field(default="development", alias="APP_ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     cors_origins: str = Field(default="http://localhost:3000", alias="CORS_ORIGINS")
@@ -19,17 +20,14 @@ class Settings(BaseSettings):
     ai_model: str = Field(default="gemini-2.5-flash-lite", alias="AI_MODEL")
     ai_max_tokens: int = Field(default=4096, alias="AI_MAX_TOKENS")
 
+    app_api_key: str = Field(default="", alias="APP_API_KEY")
+    require_api_key: bool = Field(default=False, alias="REQUIRE_API_KEY")
     max_query_results: int = Field(default=100, alias="MAX_QUERY_RESULTS")
     request_timeout_seconds: int = Field(default=60, alias="REQUEST_TIMEOUT_SECONDS")
 
     @property
     def cors_origins_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",")]
-
-    class Config:
-        env_file = ".env"
-        populate_by_name = True
-
 
 @lru_cache()
 def get_settings() -> Settings:

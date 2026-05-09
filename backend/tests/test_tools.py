@@ -10,6 +10,8 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.tools.sql_tool import run_query
+from app.tools.csv_tool import analyze_csv
+from app.tools.registry import execute_tool
 from app.utils.security import validate_user_input, sanitize_string_param, clamp_int
 
 
@@ -85,3 +87,29 @@ class TestSecurity:
         assert clamp_int(0, 1, 10, 5) == 1
         assert clamp_int(100, 1, 10, 5) == 10
         assert clamp_int("invalid", 1, 10, 5) == 5
+
+
+class TestCSVSecurity:
+    def test_sensitive_csv_rejects_raw_row_listing(self):
+        result = analyze_csv("viewers", "top_n", top_n=3)
+        assert "error" in result
+        assert "raw row" in result["error"]
+
+    def test_sensitive_csv_allows_safe_aggregates(self):
+        result = analyze_csv(
+            "viewers",
+            "value_counts",
+            group_by="subscription_tier",
+            top_n=5,
+        )
+        assert "data" in result
+        assert all("subscription_tier" in row for row in result["data"])
+
+    def test_tool_trace_redacts_identifiers(self):
+        _, trace = execute_tool(
+            "query_business_data",
+            {"query_type": "top_titles", "year": 2025, "limit": 1},
+        )
+        preview = trace.output.get("preview", [])
+        assert preview
+        assert preview[0].get("id") == "[REDACTED]"

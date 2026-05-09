@@ -126,6 +126,14 @@ docker compose up --build
 
 The backend handles data seeding (DB + PDFs + ChromaDB) automatically on first run.
 
+To require API-key access locally, set the same key for both backend and frontend before building:
+
+```bash
+export APP_API_KEY="replace-with-a-random-secret"
+export REQUIRE_API_KEY=true
+docker compose up --build
+```
+
 ---
 
 ## Example Queries
@@ -176,7 +184,7 @@ streamvision-insights/
 │   │   │   ├── csv_tool.py          # Pandas CSV analysis
 │   │   │   └── chart_tool.py        # Chart data generation
 │   │   ├── orchestrator/
-│   │   │   ├── agent.py             # Agentic loop (Claude tool use)
+│   │   │   ├── agent.py             # Agentic loop (Gemini function calling)
 │   │   │   └── prompts.py           # System prompt
 │   │   ├── ingestion/
 │   │   │   ├── seed_db.py           # CSV generation + SQLite seeding
@@ -233,6 +241,10 @@ streamvision-insights/
 - All user text validated before processing: length limits, blocked patterns (SQL injection, XSS, script injection)
 - Tool inputs sanitised via `sanitize_string_param()` and `clamp_int()` before any DB or FS access
 
+### API access
+- `/api/chat` and `/api/insights` can require a static API key via `APP_API_KEY`.
+- Set `REQUIRE_API_KEY=true` to require `X-API-Key` or `Authorization: Bearer <key>` in development; production requires a key automatically.
+
 ### SQL safety
 - **The AI never writes SQL.** It selects a `query_type` enum value and provides parameters.
 - All SQL uses SQLAlchemy `text()` with named bound parameters — no string concatenation
@@ -248,6 +260,7 @@ streamvision-insights/
 - The model receives **tool results**, not raw database connections
 - PII is never in the model context (no viewer names, emails, or individual records)
 - Only aggregate statistics are returned from viewer-related queries
+- Tool traces shown in the UI are minimised and redact identifier fields.
 - Max 8 agentic steps per request to prevent runaway loops
 
 ### Logging
@@ -265,7 +278,7 @@ The orchestrator implements a standard agentic loop:
 User question
      │
      ▼
-Claude (system prompt + tool definitions + messages)
+Gemini (system prompt + tool definitions + messages)
      │
      ├── stop_reason="tool_use"
      │       │
@@ -281,7 +294,7 @@ Claude (system prompt + tool definitions + messages)
          Final answer + tool trace + source attribution
 ```
 
-**Tool definitions** are JSON Schema objects passed to the Claude API. Claude selects which tools to call and with what parameters — it never executes arbitrary code.
+**Tool definitions** are JSON Schema objects passed to the Gemini API. Gemini selects which tools to call and with what parameters — it never executes arbitrary code.
 
 **Source attribution** is derived from the tool trace: if `query_business_data` was called, the source is `sql`; `search_documents` → `documents`; `analyze_csv` → `csv`. Citations include document names, page numbers, and SQL table names.
 
@@ -297,8 +310,8 @@ Claude (system prompt + tool definitions + messages)
 
 2. Query (per request)
    User question → FastAPI → validate input → agent.run_agent()
-       → Claude decides tools → execute tools (SQL/doc/CSV/chart)
-       → Claude synthesises answer → return ChatResponse
+       → Gemini decides tools → execute tools (SQL/doc/CSV/chart)
+       → Gemini synthesises answer → return ChatResponse
 
 3. Response
    { answer, sources, tool_trace, chart_data, citations, latency_ms }
@@ -322,6 +335,8 @@ curl -X POST http://localhost:8000/api/chat \
   -d '{"question": "Which titles performed best in 2025?", "history": [], "filters": {}}'
 ```
 
+The repository also includes a GitHub Actions workflow in `.github/workflows/ci.yml` that runs backend tests, frontend lint/build, and Docker image builds on pull requests and pushes to `main`.
+
 ---
 
 ## Assumptions & Tradeoffs
@@ -334,29 +349,37 @@ curl -X POST http://localhost:8000/api/chat \
 | Enum-based query types (no LLM-generated SQL) | Eliminates SQL injection surface entirely | Less flexible than NL-to-SQL |
 | Local PDF generation | No external files needed for demo | PDFs are synthetic |
 | Max 8 agent steps | Prevents runaway API costs | May truncate complex multi-source reasoning |
-| No auth layer | Prototype scope | Must add before any production deployment |
-| sentence-transformers via ChromaDB default | No OpenAI embedding API cost | Slightly lower quality embeddings than ada-002 |
+| Static API key option | Simple protection for internal prototype endpoints | Production should use SSO/JWT with user identity and roles |
+| Gemini function calling | Good hosted model support for tool use | Requires a configured provider API key |
+| ChromaDB default embeddings | No separate embedding provider needed | First ingestion can be slower and retrieval quality is demo-grade |
+
+Additional assumptions:
+- The dataset is synthetic and generated locally. It is intended to demonstrate architecture and controls, not represent real business performance.
+- The seeded activity data is strongest for Q1 2025. Questions outside the seeded period should be answered as unsupported or low-confidence unless additional seed data is added.
+- Viewer records intentionally avoid direct PII such as names and emails. Viewer-related tools expose aggregate patterns rather than individual records.
+- The frontend defaults to live backend data. Demo mode is available only as an explicit UI toggle for presentation fallback.
+- Generated runtime files (`backend/data`, `.next`, local `.env` files) are excluded from git and recreated by setup/build commands.
 
 ---
 
 ## Limitations & Future Improvements
 
 **Limitations of this prototype:**
-- No authentication or user identity — all users see all data
+- API-key auth is coarse-grained; it does not model user identity, roles, or per-user access control
 - SQLite is single-writer; replace with Postgres for concurrent load
 - PDF text extraction quality depends on PDF structure (scanned PDFs not supported)
 - No streaming responses (full round-trip before display)
 - Seed data is synthetic; real deployment would ingest actual business data
 
 **Improvements for production:**
-- Auth: API keys / JWT / SSO
+- Auth: JWT / SSO with RBAC and per-user audit trails
 - Real-time streaming with Server-Sent Events
 - Postgres + connection pooling
 - Async SQLAlchemy queries
 - Rate limiting per user
 - Audit log for compliance (all queries logged with user identity)
 - Multi-tenant data isolation
-- CI/CD pipeline + automated tests
+- Broader CI/CD with deployment previews and migration checks
 - Monitoring: OpenTelemetry + Grafana
 
 ---
@@ -375,6 +398,9 @@ curl -X POST http://localhost:8000/api/chat \
 | `LOG_LEVEL` | `INFO` | Logging verbosity |
 | `MAX_QUERY_RESULTS` | `100` | SQL result cap |
 | `APP_ENV` | `development` | Enables /docs in non-production |
+| `APP_API_KEY` | empty | Optional static API key for protected backend routes |
+| `REQUIRE_API_KEY` | `false` | Require `APP_API_KEY` in development when set to `true` |
+| `NEXT_PUBLIC_APP_API_KEY` | empty | Frontend API key header value for local/demo deployments |
 
 ---
 

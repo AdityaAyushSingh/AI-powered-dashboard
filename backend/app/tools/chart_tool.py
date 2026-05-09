@@ -153,6 +153,6 @@ def get_chart_data(chart_type: str, dataset: str, params: dict | None = None) ->
 
     except Exception as e:
         log.error("Chart tool error", dataset=dataset, error=str(e))
-        return {"error": "Chart generation failed", "detail": str(e)}
+        return {"error": "Chart generation failed"}
 
     return {"error": "Unhandled dataset"}

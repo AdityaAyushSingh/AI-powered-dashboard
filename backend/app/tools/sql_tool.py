@@ -351,7 +351,7 @@ def run_query(query_type: str, **kwargs) -> dict:
 
     except Exception as e:
         log.error("SQL tool error", query_type=query_type, error=str(e))
-        return {"error": "Query execution failed", "detail": str(e)}
+        return {"error": "Query execution failed"}
     finally:
         db.close()
 

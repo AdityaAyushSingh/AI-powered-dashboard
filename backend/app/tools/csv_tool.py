@@ -23,6 +23,8 @@ _ALLOWED_FILES = {
     "reviews", "marketing_spend", "regional_performance",
 }
 _ALLOWED_AGG = {"mean", "sum", "count", "max", "min", "std"}
+_AGGREGATE_ONLY_FILES = {"viewers", "watch_activity", "reviews"}
+_SENSITIVE_COLUMNS = {"id", "viewer_id", "review_text"}
 
 _df_cache: dict[str, pd.DataFrame] = {}
 
@@ -51,6 +53,10 @@ def _df_to_records(df: pd.DataFrame, limit: int = 50) -> list[dict]:
     df = df.head(limit)
     # Replace NaN with None for JSON safety
     return df.replace({np.nan: None}).to_dict(orient="records")
+
+
+def _uses_sensitive_columns(*cols: str) -> bool:
+    return any((col or "").lower() in _SENSITIVE_COLUMNS for col in cols)
 
 
 def analyze_csv(filename: str, operation: str, **kwargs) -> dict:
@@ -91,6 +97,8 @@ def analyze_csv(filename: str, operation: str, **kwargs) -> dict:
                 return {"error": f"group_by column '{group_by}' not found in {filename}"}
             if not metric or metric not in df.columns:
                 return {"error": f"metric column '{metric}' not found in {filename}"}
+            if filename in _AGGREGATE_ONLY_FILES and _uses_sensitive_columns(group_by, metric, sort_col):
+                return {"error": f"{filename}.csv supports aggregate analysis only; identifier columns are not available"}
             if agg_func not in _ALLOWED_AGG:
                 agg_func = "sum"
 
@@ -111,6 +119,9 @@ def analyze_csv(filename: str, operation: str, **kwargs) -> dict:
             }
 
         elif operation == "filter_rows":
+            if filename in _AGGREGATE_ONLY_FILES:
+                return {"error": f"{filename}.csv does not support raw row filtering"}
+
             filter_col = sanitize_string_param(kwargs.get("filter_col", ""), 100)
             filter_val = sanitize_string_param(kwargs.get("filter_val", ""), 200)
             sort_col = sanitize_string_param(kwargs.get("sort_col", ""), 100)
@@ -140,6 +151,9 @@ def analyze_csv(filename: str, operation: str, **kwargs) -> dict:
             }
 
         elif operation == "top_n":
+            if filename in _AGGREGATE_ONLY_FILES:
+                return {"error": f"{filename}.csv does not support raw row listing"}
+
             sort_col = sanitize_string_param(kwargs.get("sort_col", ""), 100)
             ascending = bool(kwargs.get("sort_ascending", False))
 
@@ -160,6 +174,8 @@ def analyze_csv(filename: str, operation: str, **kwargs) -> dict:
             col = sanitize_string_param(kwargs.get("group_by", ""), 100)
             if not col or col not in df.columns:
                 return {"error": f"Column '{col}' not found"}
+            if filename in _AGGREGATE_ONLY_FILES and _uses_sensitive_columns(col):
+                return {"error": f"{filename}.csv supports aggregate analysis only; identifier columns are not available"}
             counts = df[col].value_counts().head(limit).reset_index()
             counts.columns = [col, "count"]
             return {
@@ -187,4 +203,4 @@ def analyze_csv(filename: str, operation: str, **kwargs) -> dict:
 
     except Exception as e:
         log.error("CSV tool error", filename=filename, operation=operation, error=str(e))
-        return {"error": "CSV analysis failed", "detail": str(e)}
+        return {"error": "CSV analysis failed"}

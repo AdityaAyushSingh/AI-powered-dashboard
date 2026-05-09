@@ -2,7 +2,7 @@
 
 import {
   Zap, ChevronRight, BarChart3, History, PieChart, PanelRightClose,
-  PanelRightOpen, Sun, Moon, Monitor,
+  PanelRightOpen, Sun, Moon, Monitor, Database, FlaskConical,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAppStore } from '@/lib/store'
@@ -23,7 +23,7 @@ const THEME_OPTIONS: { id: ThemeMode; label: string; icon: React.ReactNode }[] =
 export default function Header() {
   const {
     rightPanel, setRightPanel, rightPanelOpen, toggleRightPanel,
-    theme, setTheme, useMockData,
+    theme, setTheme, useMockData, setUseMockData,
   } = useAppStore()
 
   return (
@@ -85,13 +85,18 @@ export default function Header() {
         </div>
 
         {/* Status badge */}
-        <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-2xs font-medium text-surface-500 dark:text-surface-400">
+        <button
+          onClick={() => setUseMockData(!useMockData)}
+          title={useMockData ? 'Switch to live data' : 'Switch to demo data'}
+          className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-100 dark:bg-surface-800 border border-surface-200 dark:border-surface-700 text-2xs font-medium text-surface-500 dark:text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 transition-colors"
+        >
           <span className={clsx(
             'w-1.5 h-1.5 rounded-full',
             useMockData ? 'bg-warning-500 animate-pulse-soft' : 'bg-success-500 animate-pulse',
           )} />
-          {useMockData ? 'Demo Mode' : 'Gemini 2.5 Flash'}
-        </span>
+          {useMockData ? <FlaskConical className="w-3 h-3" /> : <Database className="w-3 h-3" />}
+          {useMockData ? 'Demo Mode' : 'Live Data'}
+        </button>
 
         {/* Right panel toggle */}
         <button

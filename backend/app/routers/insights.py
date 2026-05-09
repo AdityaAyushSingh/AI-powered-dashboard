@@ -1,10 +1,11 @@
 from __future__ import annotations
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from app.models.schemas import InsightsResponse
 from app.tools.sql_tool import run_query
+from app.utils.auth import verify_api_key
 from app.utils.logger import get_logger
 
-router = APIRouter(prefix="/api", tags=["insights"])
+router = APIRouter(prefix="/api", tags=["insights"], dependencies=[Depends(verify_api_key)])
 log = get_logger("router.insights")
 
 

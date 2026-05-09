@@ -6,7 +6,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from app.orchestrator.agent import run_agent
 
-def test_prompt(name, prompt):
+
+def run_prompt(name, prompt):
     print(f"--- Testing: {name} ---")
     print(f"Prompt: {prompt}")
     try:
@@ -27,5 +28,6 @@ test_cases = [
     ("Out of Scope Request", "Can you help me write a python script to download a YouTube video?"),
 ]
 
-for name, prompt in test_cases:
-    test_prompt(name, prompt)
+if __name__ == "__main__":
+    for name, prompt in test_cases:
+        run_prompt(name, prompt)

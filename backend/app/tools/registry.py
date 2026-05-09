@@ -16,7 +16,57 @@ from app.utils.logger import get_logger
 
 log = get_logger("tool_registry")
 
-# ── Tool schemas (sent to Claude) ─────────────────────────────────────────────
+_SENSITIVE_TRACE_KEYS = {"id", "viewer_id", "review_text"}
+
+
+def _redact_trace_row(row: Any) -> Any:
+    if not isinstance(row, dict):
+        return row
+    return {
+        key: ("[REDACTED]" if key in _SENSITIVE_TRACE_KEYS else value)
+        for key, value in row.items()
+    }
+
+
+def _build_trace_output(tool_name: str, result: Any) -> Any:
+    """Keep client-visible traces small and free of row-level sensitive data."""
+    if not isinstance(result, dict):
+        return result
+
+    if "data" in result:
+        data = result["data"]
+        preview = data[:3] if isinstance(data, list) else data
+        if isinstance(preview, list):
+            preview = [_redact_trace_row(row) for row in preview]
+        else:
+            preview = _redact_trace_row(preview)
+        return {
+            **{k: v for k, v in result.items() if k != "data"},
+            "row_count": len(data) if isinstance(data, list) else 1,
+            "preview": preview,
+        }
+
+    if "passages" in result:
+        passages = result.get("passages", [])
+        return {
+            **{k: v for k, v in result.items() if k != "passages"},
+            "passage_count": len(passages) if isinstance(passages, list) else 0,
+            "preview": [
+                {
+                    "source": p.get("source"),
+                    "doc_type": p.get("doc_type"),
+                    "page": p.get("page"),
+                    "title": p.get("title"),
+                    "relevance_score": p.get("relevance_score"),
+                }
+                for p in passages[:3]
+                if isinstance(p, dict)
+            ] if isinstance(passages, list) else [],
+        }
+
+    return result
+
+# ── Tool schemas (sent to Gemini) ─────────────────────────────────────────────
 
 TOOL_DEFINITIONS = [
     {
@@ -190,20 +240,12 @@ def execute_tool(tool_name: str, tool_input: dict) -> tuple[Any, ToolCall]:
 
     except Exception as e:
         log.error("Tool execution error", tool=tool_name, error=str(e))
-        result = {"error": str(e)}
+        result = {"error": "Tool execution failed"}
         success = False
 
     duration_ms = int((time.monotonic() - start) * 1000)
 
-    # Build a sanitised copy for the trace (no full data dump)
-    trace_output = result
-    if isinstance(result, dict) and "data" in result:
-        data = result["data"]
-        trace_output = {
-            **{k: v for k, v in result.items() if k != "data"},
-            "row_count": len(data) if isinstance(data, list) else 1,
-            "preview": data[:3] if isinstance(data, list) else data,
-        }
+    trace_output = _build_trace_output(tool_name, result)
 
     tool_call = ToolCall(
         tool=tool_name,

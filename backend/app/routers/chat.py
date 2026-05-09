@@ -1,14 +1,13 @@
-from __future__ import annotations
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.models.schemas import ChatRequest, ChatResponse
 from app.orchestrator.agent import run_agent
+from app.utils.auth import verify_api_key
 from app.utils.security import validate_user_input
 from app.utils.logger import get_logger
 from app.utils.limiter import limiter
 
-router = APIRouter(prefix="/api", tags=["chat"])
+router = APIRouter(prefix="/api", tags=["chat"], dependencies=[Depends(verify_api_key)])
 log = get_logger("router.chat")
 
 
@@ -31,7 +30,7 @@ async def chat(request: Request, body: ChatRequest) -> ChatResponse:
         response = run_agent(
             question=question,
             history=history,
-            filters=body.filters,
+            filters=body.filters.model_dump(exclude_none=True),
         )
     except RuntimeError as re:
         # Point 4: Mask upstream AI errors and return standard 503

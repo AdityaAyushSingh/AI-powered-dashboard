@@ -11,7 +11,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from app.db.database import engine, init_db, SessionLocal
+from app.db.database import Base, engine, init_db, SessionLocal
 from app.db.models import Movie, Viewer, WatchActivity, Review, MarketingSpend, RegionalPerformance
 from app.config import get_settings
 
@@ -244,6 +244,7 @@ def write_csv(filename: str, rows: list[dict]) -> None:
 def seed(force: bool = False) -> None:
     from app.utils.logger import get_logger
     log = get_logger("seed_db")
+    random.seed(42)
 
     db_path = Path(settings.database_url.replace("sqlite:///", ""))
     if db_path.exists() and not force:
@@ -251,6 +252,9 @@ def seed(force: bool = False) -> None:
         return
 
     log.info("Initialising database schema")
+    if force:
+        from app.db import models  # noqa: F401 — registers models
+        Base.metadata.drop_all(bind=engine)
     init_db()
 
     log.info("Generating seed data")

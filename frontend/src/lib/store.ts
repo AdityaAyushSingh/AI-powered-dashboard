@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Conversation, Filters, QueryHistoryEntry, RightPanelView, ThemeMode } from './types'
-import { MOCK_HISTORY } from './mockData'
 
 const DEFAULT_FILTERS: Filters = { year: 2025 }
 
@@ -55,13 +54,13 @@ export const useAppStore = create<AppState>()(
       conversation:       [],
       isLoading:          false,
       pendingQuestion:    null,
-      queryHistory:       MOCK_HISTORY,
+      queryHistory:       [],
       filters:            DEFAULT_FILTERS,
       sidebarOpen:        true,
       rightPanelOpen:     true,
       rightPanel:         'insights',
       theme:              'light',
-      useMockData:        true,
+      useMockData:        false,
       commandPaletteOpen: false,
 
       addMessage: (msg) =>
@@ -103,7 +102,12 @@ export const useAppStore = create<AppState>()(
     }),
     {
       name: 'sv-store',
+      version: 2,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persistedState) => ({
+        ...(persistedState as AppState),
+        useMockData: false,
+      }),
       partialize: (s) => ({
         queryHistory:   s.queryHistory,
         filters:        s.filters,
@@ -111,7 +115,6 @@ export const useAppStore = create<AppState>()(
         rightPanelOpen: s.rightPanelOpen,
         sidebarOpen:    s.sidebarOpen,
         theme:          s.theme,
-        useMockData:    s.useMockData,
       }),
     },
   ),

@@ -1,0 +1,26 @@
+.DS_Store
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env.local
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/venv/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Generated runtime data
+backend/data/
+
